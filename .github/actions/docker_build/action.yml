@@ -1,0 +1,62 @@
+name: Build Docker Image
+description: This action builds a Docker image for the project
+inputs:
+  path_dockerfile:
+    description:  "This allows us to locate the correct Dockerfile, even if it has a different name or is located in a different directory."
+    required: false
+    default: "Dockerfile"
+  image_name:
+    description: "This is the name of the image that will be built. It can be a simple name or a full repository name (e.g., username/repo)."
+    required: true
+  tag_name:
+    description: "This is the tag that will be applied to the image. If not provided, a timestamp will be used."
+    required: false
+  architecture:
+    description: "This is the architecture for which the image will be built."
+    required: false
+  arch_name:
+    description: "This is the architecture name without special characters. It will be used to tag the image."
+    required: false
+outputs:
+  image_exported:
+      description: "This is the name of the image that was built, including the tag."
+      value: ${{ steps.docker_build.outputs.image_exported }}
+runs:
+  using: composite
+  steps:
+    - id: docker_build
+      run: |
+
+        # This script determines the value of the TAG environment variable based on the input provided.
+        # If the 'tag_name' input is not provided (empty), it generates a timestamp as the TAG value.
+        # Otherwise, it uses the provided 'tag_name' input as the TAG value.
+        if [ -z "${{ inputs.tag_name }}" ]; then
+          export TAG=$(date +%s)
+        else
+          export TAG="${{ inputs.tag_name }}"
+        fi
+
+
+        # This script checks if the input variable 'arch_name' is non-empty.
+        # If 'arch_name' is provided, it appends its value to the existing 'TAG' environment variable.
+        # This allows the generated Docker tag to include architecture-specific information.
+        if [ -n "${{ inputs.arch_name }}" ]; then
+          export TAG="$TAG-${{ inputs.arch_name }}"
+        fi
+
+
+        # This script performs a conditional Docker build based on the presence of the 'arch_name' input.
+        # - If 'arch_name' is not provided, it builds the Docker image using the default platform.
+        # - If 'arch_name' is provided, it builds the Docker image for the specified platform using the 'architecture' input.
+        if [ -z "${{ inputs.arch_name }}" ]; then
+          docker build . --file ${{ inputs.path_dockerfile }} --tag ${{ inputs.image_name }}:$TAG
+        else
+          docker build . --file ${{ inputs.path_dockerfile }} --tag ${{ inputs.image_name }}:$TAG --platform ${{ inputs.architecture }}
+        fi
+
+
+        # A string in the format "image_name:tag" is written to the $GITHUB_OUTPUT environment variable,
+        # making it available for subsequent steps in the GitHub Actions workflow.
+        echo "image_exported=${{ inputs.image_name }}:$TAG" >> $GITHUB_OUTPUT
+        
+      shell: bash

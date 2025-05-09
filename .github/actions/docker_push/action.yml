@@ -1,0 +1,14 @@
+name: Docker Push
+description: This action pushes a Docker image to a Docker registry
+inputs:
+  docker_username:
+    description: "Docker username for authentication"
+  docker_image:
+    description: "Docker image name"
+runs:
+  using: composite
+  steps:
+    - run: |
+        docker tag ${{ inputs.docker_image }} ${{ inputs.docker_username }}/${{ inputs.docker_image }}
+        docker push ${{ inputs.docker_username }}/${{ inputs.docker_image }}
+      shell: bash

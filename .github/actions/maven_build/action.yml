@@ -1,0 +1,8 @@
+name: Maven Build
+description: This action builds a Maven project
+runs:
+  using: composite
+  steps:
+    - run: |
+        mvn -B package --file pom.xml
+      shell: bash
